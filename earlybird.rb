@@ -10,12 +10,12 @@ $KCODE = 'u'
 include Term::ANSIColor
 
 class EarlyBird
-  
+
   def initialize(user, pass)
-    httpauth = Twitter::HTTPAuth.new(USER, PASS)
+    httpauth = Twitter::HTTPAuth.new(user, pass)
     @client = Twitter::Base.new(httpauth)
   end
-  
+
   def highlight(text)
     text.gsub(Twitter::Regex::REGEXEN[:extract_mentions], ' ' + blue('@\2')).
       gsub(Twitter::Regex::REGEXEN[:auto_link_hashtags], ' ' + yellow('#\3'))
