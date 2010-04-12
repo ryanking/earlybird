@@ -85,10 +85,10 @@ class Hose
 
   def extract_json(lines)
     # lines.map {|line| Yajl::Stream.parse(StringIO.new(line)).to_mash rescue nil }.compact
-    lines.map {|line| JSON.parse(line).to_mash rescue nil }.compact
+    lines.map {|line| JSON.parse(line).to_hash rescue nil }.compact
   end
 
-  def run(user, pass, host, path, debug=falses)
+  def run(user, pass, host, path, debug=false)
     if debug
       $stdin.each_line do |line|
         process(line)
