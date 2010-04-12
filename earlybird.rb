@@ -160,11 +160,11 @@ user = $stdin.gets.strip
 pass = ask("Enter your password:  ") { |q| q.echo = '*' }
 
 
-track = ARGV.reject{|t| t == 'debug'}.join(' ')
+track = ARGV.reject{|t| t == 'debug'}.join(' ').split(',')
 url = '/2b/user.json'
 if track.length > 0
-  url << "?track=" + CGI::escape(track)
+  url << "?track=" + CGI::escape(track.join(','))
 end
 puts "connecting to #{url}"
-eb = EarlyBird.new(user, pass, track.split(','))
+eb = EarlyBird.new(user, pass, track)
 Hose.new.run(user, pass, 'betastream.twitter.com', url, ARGV.first == 'debug'){|line| eb.process(line)}
