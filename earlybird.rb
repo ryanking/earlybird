@@ -11,9 +11,11 @@ include Term::ANSIColor
 
 class EarlyBird
 
-  def initialize(user, pass)
+  def initialize(user, pass, track)
     httpauth = Twitter::HTTPAuth.new(user, pass)
     @client = Twitter::Base.new(httpauth)
+    @friends = []
+    @track = track
   end
 
   def highlight(text)
@@ -21,8 +23,19 @@ class EarlyBird
       gsub(Twitter::Regex::REGEXEN[:auto_link_hashtags], ' ' + yellow('#\3'))
   end
 
+  def search_highlight(text)
+    highlight(text)
+    @track.inject(text) do |newtext, term|
+      newtext.gsub(term, green(term))
+    end
+  end
+
   def print_tweet(sn, text)
     print sn(sn) , ': ', highlight(text), "\n"
+  end
+
+  def print_search(sn, text)
+    print green(bold(sn)) , ': ', search_highlight(text), "\n"
   end
 
   def sn(sn)
@@ -40,8 +53,15 @@ class EarlyBird
   def process(data)
     if data['friends']
       # initial dump of friends
+      @friends = data['friends']
     elsif data['text'] #tweet
-      print_tweet(data['user']['screen_name'], data['text'])
+      if @friends.include?(data['user']['id'])
+        print_tweet(data['user']['screen_name'], data['text'])
+      else
+        print ' search result: '  + sn(data['user']['screen_name']) + "\n"
+        print "\t"
+        print_search(data['user']['screen_name'], data['text'])
+      end
     elsif data['event']
       case data['event']
       when 'favorite', 'unfavorite'
@@ -135,9 +155,16 @@ class Hose
 end
 
 print "username: "
-user = gets.strip
+# had to qualify by $stdin because it wanted to do gets from ARGV?
+user = $stdin.gets.strip
 pass = ask("Enter your password:  ") { |q| q.echo = '*' }
 
 
-eb = EarlyBird.new(user, pass)
-Hose.new.run(user, pass, 'betastream.twitter.com', '/2b/user.json', ARGV.first == 'debug'){|line| eb.process(line)}
+track = ARGV.reject{|t| t == 'debug'}.join(' ')
+url = '/2b/user.json'
+if track.length > 0
+  url << "?track=" + CGI::escape(track)
+end
+puts "connecting to #{url}"
+eb = EarlyBird.new(user, pass, track.split(','))
+Hose.new.run(user, pass, 'betastream.twitter.com', url, ARGV.first == 'debug'){|line| eb.process(line)}
