@@ -41,10 +41,11 @@ class EarlyBird
       # initial dump of friends
     elsif data['text'] #tweet
       if data['retweeted_status']
-        print sn(u.screen_name), " retweeted: " + "\n\t"
+        print sn(data['user']['screen_name']), " retweeted: " + "\n\t"
         print_tweet(data['retweeted_status']['user']['screen_name'], data['retweeted_status']['text'])
+      else
+        print_tweet(data['user']['screen_name'], data['text'])
       end
-      print_tweet(data['user']['screen_name'], data['text'])
     elsif data['event']
       case data['event']
       when 'favorite', 'unfavorite'
