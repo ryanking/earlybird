@@ -17,7 +17,7 @@ class EarlyBird
   end
 
   def highlight(text)
-    text.gsub(Twitter::Regex::REGEXEN[:extract_mentions], ' ' + blue('@\2')).
+    text.gsub(Twitter::Regex::REGEXEN[:extract_mentions], ' ' + cyan('@\2')).
       gsub(Twitter::Regex::REGEXEN[:auto_link_hashtags], ' ' + yellow('#\3'))
   end
 
