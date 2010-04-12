@@ -2,10 +2,9 @@
 #  switch to xauth
 #    ask for u/p once, then save token (https://gist.github.com/304123/17685f51b5ecad341de9b58fb6113b4346a7e39f)
 
-
 $KCODE = 'u'
 
-%w[rubygems net/http json twitter-text term/ansicolor twitter highline/import].each{|l| require l}
+%w[rubygems pp net/http json twitter-text term/ansicolor twitter highline/import].each{|l| require l}
 
 include Term::ANSIColor
 
@@ -41,6 +40,10 @@ class EarlyBird
     if data['friends']
       # initial dump of friends
     elsif data['text'] #tweet
+      if data['retweeted_status']
+        print sn(u.screen_name), " retweeted: " + "\n\t"
+        print_tweet(data['retweeted_status']['user']['screen_name'], data['retweeted_status']['text'])
+      end
       print_tweet(data['user']['screen_name'], data['text'])
     elsif data['event']
       case data['event']
