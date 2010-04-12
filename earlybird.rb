@@ -60,7 +60,7 @@ class EarlyBird
       if @friends.include?(data['user']['id'])
         print_tweet(data['user']['screen_name'], data['text'])
       else
-        print ' search result: '  + sn(data['user']['screen_name']) + "\n"
+        print 'search result: '  + sn(data['user']['screen_name']) + "\n"
         print "\t"
         print_search(data['user']['screen_name'], data['text'])
       end
