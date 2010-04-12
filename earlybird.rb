@@ -5,7 +5,7 @@
 
 $KCODE = 'u'
 
-%w[rubygems net/http json twitter-text term/ansicolor twitter ].each{|l| require l}
+%w[rubygems net/http json twitter-text term/ansicolor twitter highline/import].each{|l| require l}
 
 include Term::ANSIColor
 
@@ -29,6 +29,14 @@ class EarlyBird
     red(bold(sn))
   end
 
+  def user_and_status(user_id, status_id)
+    u = @client.user(user_id)
+    s = @client.status(status_id)
+    [u, s]
+  rescue Twitter::General => e
+    raise e unless e.message =~ /403/
+  end
+
   def process(data)
     if data['friends']
       # initial dump of friends
@@ -37,14 +45,12 @@ class EarlyBird
     elsif data['event']
       case data['event']
       when 'favorite'
-        u = @client.user(data['source']['id'])
-        s = @client.status(data['target_object']['id'])
+        u, s = user_and_status(data['source']['id'], data['target_object']['id'])
         print sn(u.screen_name), ' favorited: ' + "\n"
         print "\t"
         print_tweet(s.user.screen_name, s.text)
       when 'retweet'
-        u = @client.user(data['source']['id'])
-        s = @client.status(data['target_object']['id'])
+        u, s = user_and_status(data['source']['id'], data['target_object']['id'])
         print sn(u.screen_name), ' rewtweeted: ' + "\n"
         print "\t"
         print_tweet(s.user.screen_name, s.text)
@@ -56,13 +62,15 @@ class EarlyBird
         puts "unknown event: #{data['event']}"
         puts data
       end
+    elsif data['delete']
+      # ignore deletes
     else
       puts 'unknown message'
       puts data
       puts '===='
     end
   rescue Twitter::RateLimitExceeded
-    puts 'event dropped due to twitter rate limit'
+    puts "event dropped due to twitter rate limit (reset in #{@client.rate_limit_status['reset_time_in_seconds'] - Time.now} seconds)"
     p @client.rate_limit_status
   end
 end
@@ -73,7 +81,6 @@ class Hose
   NEWLINE     = /[\n]/
   CRLF        = /[\r][\n]/
   EOF         = /[\r][\n]\Z/
-
 
   def unchunk(data)
     data.gsub(/\A[0-F]+[\r][\n]/, '')
@@ -122,8 +129,7 @@ end
 
 print "username: "
 user = gets.strip
-print "password: "
-pass = gets.strip
+pass = ask("Enter your password:  ") { |q| q.echo = '*' }
 
 
 eb = EarlyBird.new(user, pass)
