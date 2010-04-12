@@ -26,7 +26,9 @@ class EarlyBird
   def search_highlight(text)
     highlight(text)
     @track.inject(text) do |newtext, term|
-      newtext.gsub(term, green(term))
+      newtext.gsub /#{term}/i do |match|
+        green(match)
+      end
     end
   end
 
