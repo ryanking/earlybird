@@ -57,6 +57,8 @@ class EarlyBird
         s = @client.user(data['source']['id'])
         t = @client.user(data['target']['id'])
         print sn(s['screen_name']), ' ', data['event'], 'ed', ' ', sn(t['screen_name']), "\n"
+      when 'retweet'
+        #ignore
       else
         puts "unknown event: #{data['event']}"
         puts data
