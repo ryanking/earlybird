@@ -53,11 +53,6 @@ class EarlyBird
         print sn(u.screen_name), ' favorited: ' + "\n"
         print "\t"
         print_tweet(s.user.screen_name, s.text)
-      when 'retweet'
-        u, s = user_and_status(data['source']['id'], data['target_object']['id'])
-        print sn(u.screen_name), " #{data['event']}d: " + "\n"
-        print "\t"
-        print_tweet(s.user.screen_name, s.text)
       when 'unfollow', 'follow', 'block'
         s = @client.user(data['source']['id'])
         t = @client.user(data['target']['id'])
