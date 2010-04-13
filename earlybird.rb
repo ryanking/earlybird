@@ -2,20 +2,20 @@
 #  switch to xauth
 #    ask for u/p once, then save token (https://gist.github.com/304123/17685f51b5ecad341de9b58fb6113b4346a7e39f)
 
-
 $KCODE = 'u'
 
-%w[rubygems net/http json twitter-text term/ansicolor twitter highline/import getoptlong].each{|l| require l}
+%w[rubygems pp net/http json twitter-text term/ansicolor twitter highline/import getoptlong].each{|l| require l}
 
 include Term::ANSIColor
 
 class EarlyBird
 
-  def initialize(user, pass, filter)
+  def initialize(user, pass, filter, track)
     httpauth = Twitter::HTTPAuth.new(user, pass)
     @client = Twitter::Base.new(httpauth)
-    @friends = @client.friend_ids
+    @friends = []
     @filter = filter
+    @track = track
   end
 
   def highlight(text)
@@ -23,8 +23,21 @@ class EarlyBird
       gsub(Twitter::Regex::REGEXEN[:auto_link_hashtags], ' ' + yellow('#\3'))
   end
 
+  def search_highlight(text)
+    highlight(text)
+    @track.inject(text) do |newtext, term|
+      newtext.gsub /#{term}/i do |match|
+        green(match)
+      end
+    end
+  end
+
   def print_tweet(sn, text)
     print sn(sn) , ': ', highlight(text), "\n"
+  end
+
+  def print_search(sn, text)
+    print green(bold(sn)) , ': ', search_highlight(text), "\n"
   end
 
   def sn(sn)
@@ -40,17 +53,29 @@ class EarlyBird
   end
 
   def print_tweet_from_data(data)
-    print_tweet(data['user']['screen_name'], data['text'])
+    if $filter and data['in_reply_to_user_id'] and @friends.include?(data['in_reply_to_user_id'])
+      print_tweet(data['user']['screen_name'], data['text'])
+    else
+      print_tweet(data['user']['screen_name'], data['text'])
+    end
   end
 
   def process(data)
     if data['friends']
       # initial dump of friends
+      @friends = data['friends']
     elsif data['text'] #tweet
-      if $filter and data['in_reply_to_user_id'] and @friends.include?(data['in_reply_to_user_id'])
-        print_tweet_from_data(data)
+      if @friends.include?(data['user']['id'])
+        if data['retweeted_status']
+          print sn(data['user']['screen_name']), " retweeted: " + "\n\t"
+          print_tweet(data['retweeted_status']['user']['screen_name'], data['retweeted_status']['text'])
+        else
+          print_tweet_from_data(data)
+        end
       else
-        print_tweet_from_data(data)
+        print 'search result: '  + sn(data['user']['screen_name']) + "\n"
+        print "\t"
+        print_search(data['user']['screen_name'], data['text'])
       end
     elsif data['event']
       case data['event']
@@ -59,15 +84,12 @@ class EarlyBird
         print sn(u.screen_name), ' favorited: ' + "\n"
         print "\t"
         print_tweet(s.user.screen_name, s.text)
-      when 'retweet'
-        u, s = user_and_status(data['source']['id'], data['target_object']['id'])
-        print sn(u.screen_name), " #{data['event']}d: " + "\n"
-        print "\t"
-        print_tweet(s.user.screen_name, s.text)
       when 'unfollow', 'follow', 'block'
         s = @client.user(data['source']['id'])
         t = @client.user(data['target']['id'])
         print sn(s['screen_name']), ' ', data['event'], 'ed', ' ', sn(t['screen_name']), "\n"
+      when 'retweet'
+        #ignore
       else
         puts "unknown event: #{data['event']}"
         puts data
@@ -136,7 +158,7 @@ class Hose
               end
             end
           }
-        rescue Errno::ECONNRESET
+        rescue Errno::ECONNRESET, EOFError
           puts "disconnected from streaming api, reconnecting..."
           sleep 5
         end
@@ -145,26 +167,32 @@ class Hose
   end
 end
 
-print "username: "
-user = $stdin.gets.strip
+user = ask("Enter your username:  ")
 pass = ask("Enter your password:  ") { |q| q.echo = '*' }
 
-
 def usage
-  puts "usage: earlybird.rb [-d] [-f]"
+  puts "usage: earlybird.rb [-d] [-f] [-t key,words] [-u url] [-h host]"
   puts "options: "
   puts "  -d debug mode, read json from stdin"
   puts "  -f filter out @replies from users you don't follow"
+  puts "  -t track keywords separated by commas."
+  puts "  -u userstream path. Default: /2b/user.json"
+  puts "  -h userstream hostname: Default: betastream.twitter.com"
 end
 
 opts = GetoptLong.new(
       [ '--help', GetoptLong::NO_ARGUMENT ],
       [ '-d', GetoptLong::OPTIONAL_ARGUMENT ],
-      [ '-f', GetoptLong::OPTIONAL_ARGUMENT ]
+      [ '-f', GetoptLong::OPTIONAL_ARGUMENT ],
+      [ '-t', GetoptLong::OPTIONAL_ARGUMENT],
+      [ '-h', GetoptLong::OPTIONAL_ARGUMENT]
     )
 
 $debug = false
 $filter = false
+$track = nil
+$url = '/2b/user.json'
+$host = 'betastream.twitter.com'
 
 opts.each do |opt, arg|
   case opt
@@ -175,8 +203,21 @@ opts.each do |opt, arg|
     $filter = true
   when '-d'
     $debug = true
+  when '-t'
+    $track = arg
+  when '-u'
+    $url = arg
+  when '-h'
+    $host = arg
   end
 end
 
-eb = EarlyBird.new(user, pass, $filter)
-Hose.new.run(user, pass, 'betastream.twitter.com', '/2b/user.json', $debug){|line| eb.process(line)}
+if $track
+  puts "tracking term #{$track}"
+  $url << "?track=" + CGI::escape($track)
+end
+
+puts "connecting to #{$url}"
+
+eb = EarlyBird.new(user, pass, $filter, $track)
+Hose.new.run(user, pass, $host, $url, $debug){|line| eb.process(line)}
