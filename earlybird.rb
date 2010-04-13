@@ -157,9 +157,7 @@ class Hose
   end
 end
 
-print "username: "
-# had to qualify by $stdin because it wanted to do gets from ARGV?
-user = $stdin.gets.strip
+user = ask("Enter your username:  ")
 pass = ask("Enter your password:  ") { |q| q.echo = '*' }
 
 
