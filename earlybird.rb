@@ -126,7 +126,7 @@ class Hose
               end
             end
           }
-        rescue Errno::ECONNRESET
+        rescue Errno::ECONNRESET, EOFError
           puts "disconnected from streaming api, reconnecting..."
           sleep 5
         end
