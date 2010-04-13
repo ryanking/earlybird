@@ -5,15 +5,17 @@
 
 $KCODE = 'u'
 
-%w[rubygems net/http json twitter-text term/ansicolor twitter highline/import].each{|l| require l}
+%w[rubygems net/http json twitter-text term/ansicolor twitter highline/import getoptlong].each{|l| require l}
 
 include Term::ANSIColor
 
 class EarlyBird
 
-  def initialize(user, pass)
+  def initialize(user, pass, filter)
     httpauth = Twitter::HTTPAuth.new(user, pass)
     @client = Twitter::Base.new(httpauth)
+    @friends = @client.friend_ids
+    @filter = filter
   end
 
   def highlight(text)
@@ -37,11 +39,19 @@ class EarlyBird
     raise e unless e.message =~ /403/
   end
 
+  def print_tweet_from_data(data)
+    print_tweet(data['user']['screen_name'], data['text'])
+  end
+
   def process(data)
     if data['friends']
       # initial dump of friends
     elsif data['text'] #tweet
-      print_tweet(data['user']['screen_name'], data['text'])
+      if $filter and data['in_reply_to_user_id'] and @friends.include?(data['in_reply_to_user_id'])
+        print_tweet_from_data(data)
+      else
+        print_tweet_from_data(data)
+      end
     elsif data['event']
       case data['event']
       when 'favorite', 'unfavorite'
@@ -95,7 +105,8 @@ class Hose
     lines.map {|line| JSON.parse(line).to_hash rescue nil }.compact
   end
 
-  def run(user, pass, host, path, debug=false)
+  # filter determines whether you remove @replies from users you don't follow
+  def run(user, pass, host, path, debug=false, filter=false)
     if debug
       $stdin.each_line do |line|
         process(line)
@@ -135,9 +146,37 @@ class Hose
 end
 
 print "username: "
-user = gets.strip
+user = $stdin.gets.strip
 pass = ask("Enter your password:  ") { |q| q.echo = '*' }
 
 
-eb = EarlyBird.new(user, pass)
-Hose.new.run(user, pass, 'betastream.twitter.com', '/2b/user.json', ARGV.first == 'debug'){|line| eb.process(line)}
+def usage
+  puts "usage: earlybird.rb [-d] [-f]"
+  puts "options: "
+  puts "  -d debug mode, read json from stdin"
+  puts "  -f filter out @replies from users you don't follow"
+end
+
+opts = GetoptLong.new(
+      [ '--help', GetoptLong::NO_ARGUMENT ],
+      [ '-d', GetoptLong::OPTIONAL_ARGUMENT ],
+      [ '-f', GetoptLong::OPTIONAL_ARGUMENT ]
+    )
+
+$debug = false
+$filter = false
+
+opts.each do |opt, arg|
+  case opt
+  when '--help'
+    usage
+    exit 0
+  when '-f'
+    $filter = true
+  when '-d'
+    $debug = true
+  end
+end
+
+eb = EarlyBird.new(user, pass, $filter)
+Hose.new.run(user, pass, 'betastream.twitter.com', '/2b/user.json', $debug){|line| eb.process(line)}
