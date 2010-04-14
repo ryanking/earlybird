@@ -136,34 +136,34 @@ class Hose
         process(line)
       end
     else
-      while true
-        begin
-          Net::HTTP.start(host) {|http|
-            req = Net::HTTP::Get.new(path)
-            req.basic_auth user, pass
-            http.request(req) do |response|
-              buffer = ''
-              response.read_body do |data|
-                unless keep_alive?(data)
-                  buffer << unchunk(data)
+      begin
+        Net::HTTP.start(host) {|http|
+          req = Net::HTTP::Get.new(path)
+          req.basic_auth user, pass
+          http.request(req) do |response|
+            buffer = ''
+            raise response.inspect unless response.code == 200
+            response.read_body do |data|
+              unless keep_alive?(data)
+                buffer << unchunk(data)
 
-                  if buffer =~ EOF
-                    lines = buffer.split(CRLF)
-                    buffer = ''
-                  else
-                    lines = buffer.split(CRLF)
-                    buffer = lines.pop
-                  end
-
-                  extract_json(lines).each {|line| yield(line)}
+                if buffer =~ EOF
+                  lines = buffer.split(CRLF)
+                  buffer = ''
+                else
+                  lines = buffer.split(CRLF)
+                  buffer = lines.pop
                 end
+
+                extract_json(lines).each {|line| yield(line)}
               end
             end
-          }
-        rescue Errno::ECONNRESET, EOFError
-          puts "disconnected from streaming api, reconnecting..."
-          sleep 5
-        end
+          end
+        }
+      rescue Errno::ECONNRESET, EOFError
+        puts "disconnected from streaming api, reconnecting..."
+        sleep 5
+        retry
       end
     end
   end
