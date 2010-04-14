@@ -115,6 +115,8 @@ class EarlyBird
         puts "unknown event: #{data['event']}"
         puts data
       end
+    elsif data['limit'] && data['limit']['track']
+      puts bold("rate limited on track...")
     elsif data['delete']
       # ignore deletes
     else
