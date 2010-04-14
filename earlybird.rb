@@ -15,8 +15,8 @@ class EarlyBird
     @client = Twitter::Base.new(httpauth)
     @friends = []
     @filter = filter
-    @track = track
     @screen_name = user
+    @track = Array(track) + Array(user)
   end
 
   def highlight(text)
@@ -38,7 +38,7 @@ class EarlyBird
   end
 
   def print_search(sn, text)
-    print green(bold(sn)) , ': ', search_highlight(text), "\n"
+    print sn(sn) , ': ', search_highlight(text), "\n"
   end
 
   def sn(sn)
@@ -120,7 +120,7 @@ class EarlyBird
       # ignore deletes
     else
       puts 'unknown message'
-      puts data
+      p data
       puts '===='
     end
   rescue Twitter::RateLimitExceeded
@@ -156,34 +156,34 @@ class Hose
         process(line)
       end
     else
-      while true
-        begin
-          Net::HTTP.start(host) {|http|
-            req = Net::HTTP::Get.new(path)
-            req.basic_auth user, pass
-            http.request(req) do |response|
-              buffer = ''
-              response.read_body do |data|
-                unless keep_alive?(data)
-                  buffer << unchunk(data)
+      begin
+        Net::HTTP.start(host) {|http|
+          req = Net::HTTP::Get.new(path)
+          req.basic_auth user, pass
+          http.request(req) do |response|
+            buffer = ''
+            raise response.inspect unless response.code == 200
+            response.read_body do |data|
+              unless keep_alive?(data)
+                buffer << unchunk(data)
 
-                  if buffer =~ EOF
-                    lines = buffer.split(CRLF)
-                    buffer = ''
-                  else
-                    lines = buffer.split(CRLF)
-                    buffer = lines.pop
-                  end
-
-                  extract_json(lines).each {|line| yield(line)}
+                if buffer =~ EOF
+                  lines = buffer.split(CRLF)
+                  buffer = ''
+                else
+                  lines = buffer.split(CRLF)
+                  buffer = lines.pop
                 end
+
+                extract_json(lines).each {|line| yield(line)}
               end
             end
-          }
-        rescue Errno::ECONNRESET, EOFError
-          puts "disconnected from streaming api, reconnecting..."
-          sleep 5
-        end
+          end
+        }
+      rescue Errno::ECONNRESET, EOFError
+        puts "disconnected from streaming api, reconnecting..."
+        sleep 5
+        retry
       end
     end
   end
@@ -214,7 +214,7 @@ $debug = false
 $filter = false
 $track = []
 $url = '/2b/user.json'
-$host = 'betastream.twitter.com'
+$host = 'chirpstream.twitter.com'
 
 opts.each do |opt, arg|
   case opt
