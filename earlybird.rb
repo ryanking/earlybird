@@ -75,8 +75,7 @@ class EarlyBird
           print_tweet_from_data(data)
         end
       else
-        print 'search result: '  + sn(data['user']['screen_name']) + "\n"
-        print "\t"
+        print "search result: \n\t"
         print_search(data['user']['screen_name'], data['text'])
       end
     elsif data['event']
