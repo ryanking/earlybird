@@ -15,7 +15,7 @@ class EarlyBird
     @client = Twitter::Base.new(httpauth)
     @friends = []
     @filter = filter
-    @track = track
+    @track = Array(track) + Array(user)
   end
 
   def highlight(text)
@@ -37,7 +37,7 @@ class EarlyBird
   end
 
   def print_search(sn, text)
-    print green(bold(sn)) , ': ', search_highlight(text), "\n"
+    print sn(sn) , ': ', search_highlight(text), "\n"
   end
 
   def sn(sn)
@@ -98,7 +98,7 @@ class EarlyBird
       # ignore deletes
     else
       puts 'unknown message'
-      puts data
+      p data
       puts '===='
     end
   rescue Twitter::RateLimitExceeded
