@@ -7,6 +7,7 @@ The User Streams api is currently only available as a developer preview for the 
 See http://apiwiki.twitter.com/ChirpUserStreams for more info.
 
 
+Send questions about User Streams to http://groups.google.com/group/twitter-development-talk or about this script to ryan@twitter.com.
 
 
 
