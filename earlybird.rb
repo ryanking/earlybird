@@ -142,7 +142,7 @@ class Hose
           req.basic_auth user, pass
           http.request(req) do |response|
             buffer = ''
-            raise response.inspect unless response.code == 200
+            raise response.inspect unless response.code == '200'
             response.read_body do |data|
               unless keep_alive?(data)
                 buffer << unchunk(data)
