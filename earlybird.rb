@@ -16,6 +16,7 @@ class EarlyBird
     @friends = []
     @filter = filter
     @track = track
+    @screen_name = user
   end
 
   def highlight(text)
@@ -52,9 +53,27 @@ class EarlyBird
     raise e unless e.message =~ /403/
   end
 
+  # If it's an @reply but not to somebody you follow (or to you), then we drop it
+  def passes_filter(data)
+    # If it's sent by you, then it passes
+    if data['user']['screen_name'] == @screen_name
+      return true
+    end
+
+    in_reply_to = data['user']['in_reply_to_user_id']
+
+    if in_reply_to
+      # If it's sent to a friend of yours or to you then it passes
+      @friends.include?(in_reply_to) or (data['user']['in_reply_to_screen_name'] == @screen_name)
+    else
+      # If it's not an @reply then it passes.
+      true
+    end
+  end
+
   def print_tweet_from_data(data)
     if $filter
-      if data['in_reply_to_user_id'] and @friends.include?(data['in_reply_to_user_id'])
+      if passes_filter(data)
         print_tweet(data['user']['screen_name'], data['text'])
       end
     else
@@ -67,7 +86,8 @@ class EarlyBird
       # initial dump of friends
       @friends = data['friends']
     elsif data['text'] #tweet
-      if @friends.include?(data['user']['id'])
+      # If it's from a friend or from yourself, treat as a tweet.
+      if @friends.include?(data['user']['id']) or (data['user']['screen_name'] == @screen_name)
         if data['retweeted_status']
           print sn(data['user']['screen_name']), " retweeted: " + "\n\t"
           print_tweet(data['retweeted_status']['user']['screen_name'], data['retweeted_status']['text'])
@@ -192,7 +212,7 @@ opts = GetoptLong.new(
 
 $debug = false
 $filter = false
-$track = nil
+$track = []
 $url = '/2b/user.json'
 $host = 'betastream.twitter.com'
 
@@ -206,7 +226,7 @@ opts.each do |opt, arg|
   when '-d'
     $debug = true
   when '-t'
-    $track = arg
+    $track = arg.split(",")
   when '-u'
     $url = arg
   when '-h'
@@ -214,12 +234,12 @@ opts.each do |opt, arg|
   end
 end
 
-if $track
+unless $track.empty?
   puts "tracking term #{$track}"
-  $url << "?track=" + CGI::escape($track)
+  $url << "?track=" + CGI::escape($track.join(","))
 end
 
-puts "connecting to #{$url}"
+puts "connecting to http://#{$host}#{$url}"
 
 eb = EarlyBird.new(user, pass, $filter, $track)
 Hose.new.run(user, pass, $host, $url, $debug){|line| eb.process(line)}
