@@ -194,7 +194,7 @@ $debug = false
 $filter = false
 $track = nil
 $url = '/2b/user.json'
-$host = 'betastream.twitter.com'
+$host = 'chirpstream.twitter.com'
 
 opts.each do |opt, arg|
   case opt
