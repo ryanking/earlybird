@@ -53,8 +53,10 @@ class EarlyBird
   end
 
   def print_tweet_from_data(data)
-    if $filter and data['in_reply_to_user_id'] and @friends.include?(data['in_reply_to_user_id'])
-      print_tweet(data['user']['screen_name'], data['text'])
+    if $filter
+      if data['in_reply_to_user_id'] and @friends.include?(data['in_reply_to_user_id'])
+        print_tweet(data['user']['screen_name'], data['text'])
+      end
     else
       print_tweet(data['user']['screen_name'], data['text'])
     end
