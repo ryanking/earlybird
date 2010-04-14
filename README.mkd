@@ -1,5 +1,7 @@
 # Earlybird
 
+**During Chirp, access is limited to venue IP addresses only.**
+
 Earlybird is a basic demo of Twitter's User Streams. Its by no means perfect, but hopefully shows a bit about how you can use the new api.
 
 The User Streams api is currently only available as a developer preview for the chirp conference (chirp.twitter.com).
