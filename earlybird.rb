@@ -200,7 +200,7 @@ def usage
   puts "  -f filter out @replies from users you don't follow"
   puts "  -t track keywords separated by commas."
   puts "  -u userstream path. Default: /2b/user.json"
-  puts "  -h userstream hostname: Default: betastream.twitter.com"
+  puts "  -h userstream hostname: Default: chirpstream.twitter.com"
 end
 
 opts = GetoptLong.new(
