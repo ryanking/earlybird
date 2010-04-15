@@ -95,6 +95,12 @@ class EarlyBird
     end
   end
 
+  def print_retweet_from_data(data)
+    print sn(data['user']['screen_name']), " retweeted: " + "\n\t"
+    print_tweet(data['retweeted_status']['user']['screen_name'], data['retweeted_status']['text'])
+    growl_tweet(data)
+  end
+
   def process(data)
     if data['friends']
       # initial dump of friends
@@ -103,8 +109,7 @@ class EarlyBird
       # If it's from a friend or from yourself, treat as a tweet.
       if @friends.include?(data['user']['id']) or (data['user']['screen_name'] == @screen_name)
         if data['retweeted_status']
-          print sn(data['user']['screen_name']), " retweeted: " + "\n\t"
-          print_tweet(data['retweeted_status']['user']['screen_name'], data['retweeted_status']['text'])
+          print_retweet_from_data(data)
         else
           print_tweet_from_data(data)
         end
