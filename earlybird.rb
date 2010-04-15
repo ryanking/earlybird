@@ -4,7 +4,7 @@
 
 $KCODE = 'u'
 
-%w[rubygems pp net/http json twitter-text term/ansicolor twitter highline/import getoptlong growl tempfile open-uri].each{|l| require l}
+%w[rubygems pp net/http json twitter-text term/ansicolor twitter highline/import getoptlong tempfile open-uri].each{|l| require l}
 
 include Term::ANSIColor
 
@@ -46,6 +46,8 @@ class EarlyBird
   end
 
   def growl_tweet(data)
+    return unless $growl
+
     icon_path = fetch_icon_for_user(data['user'])
     Growl.notify(data['text'], :title => data['user']['screen_name'], :icon => icon_path)
   end
@@ -222,6 +224,7 @@ def usage
   puts "options: "
   puts "  -d debug mode, read json from stdin"
   puts "  -f filter out @replies from users you don't follow"
+  puts "  -g growl notifications for new tweets"
   puts "  -t track keywords separated by commas."
   puts "  -u userstream path. Default: /2b/user.json"
   puts "  -h userstream hostname: Default: chirpstream.twitter.com"
@@ -231,12 +234,14 @@ opts = GetoptLong.new(
       [ '--help', GetoptLong::NO_ARGUMENT ],
       [ '-d', GetoptLong::OPTIONAL_ARGUMENT ],
       [ '-f', GetoptLong::OPTIONAL_ARGUMENT ],
+      [ '-g', GetoptLong::OPTIONAL_ARGUMENT ],
       [ '-t', GetoptLong::OPTIONAL_ARGUMENT],
       [ '-h', GetoptLong::OPTIONAL_ARGUMENT]
     )
 
 $debug = false
 $filter = false
+$growl = false
 $track = []
 $url = '/2b/user.json'
 $host = 'chirpstream.twitter.com'
@@ -248,6 +253,9 @@ opts.each do |opt, arg|
     exit 0
   when '-f'
     $filter = true
+  when '-g'
+    require 'growl'
+    $growl = true
   when '-d'
     $debug = true
   when '-t'
