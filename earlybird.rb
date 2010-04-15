@@ -17,6 +17,7 @@ class EarlyBird
     @filter = filter
     @screen_name = user
     @track = Array(track) + Array(user)
+    @icons = {}
   end
 
   def highlight(text)
@@ -32,16 +33,20 @@ class EarlyBird
       end
     end
   end
-  
-  def fetch_icon(icon_url)
-    icon = Tempfile.new("twitter-icon")
-    icon.print open(icon_url).read
-    icon.close
-    icon.path
+
+  def fetch_icon_for_user(user)
+    user_id = user['id'].to_i
+    unless @icons.has_key?(user_id)
+      Tempfile.open(user['screen_name']) do |file|
+        file.print open(user['profile_image_url']).read
+        @icons[user_id] = file.path
+      end
+    end
+    @icons[user_id]
   end
-  
+
   def growl_tweet(data)
-    icon_path = fetch_icon(data['user']['profile_image_url'])
+    icon_path = fetch_icon_for_user(data['user'])
     Growl.notify(data['text'], :title => data['user']['screen_name'], :icon => icon_path)
   end
 
