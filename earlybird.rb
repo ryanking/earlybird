@@ -4,7 +4,7 @@
 
 $KCODE = 'u'
 
-%w[rubygems pp net/http json twitter-text term/ansicolor twitter highline/import getoptlong growl].each{|l| require l}
+%w[rubygems pp net/http json twitter-text term/ansicolor twitter highline/import getoptlong growl tempfile open-uri].each{|l| require l}
 
 include Term::ANSIColor
 
@@ -31,6 +31,18 @@ class EarlyBird
         green(match)
       end
     end
+  end
+  
+  def fetch_icon(icon_url)
+    icon = Tempfile.new("twitter-icon")
+    icon.print open(icon_url).read
+    icon.close
+    icon.path
+  end
+  
+  def growl_tweet(data)
+    icon_path = fetch_icon(data['user']['profile_image_url'])
+    Growl.notify(data['text'], :title => data['user']['screen_name'], :icon => icon_path)
   end
 
   def print_tweet(sn, text)
@@ -75,11 +87,11 @@ class EarlyBird
     if $filter
       if passes_filter(data)
         print_tweet(data['user']['screen_name'], data['text'])
-        Growl.notify("#{data['user']['screen_name']}: #{data['text']}")        
+        growl_tweet(data)
       end
     else
       print_tweet(data['user']['screen_name'], data['text'])
-      Growl.notify("#{data['user']['screen_name']}: #{data['text']}")
+      growl_tweet(data)
     end
   end
 
