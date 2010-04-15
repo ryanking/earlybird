@@ -4,7 +4,7 @@
 
 $KCODE = 'u'
 
-%w[rubygems pp net/http json twitter-text term/ansicolor twitter highline/import getoptlong].each{|l| require l}
+%w[rubygems pp net/http json twitter-text term/ansicolor twitter highline/import getoptlong growl].each{|l| require l}
 
 include Term::ANSIColor
 
@@ -75,9 +75,11 @@ class EarlyBird
     if $filter
       if passes_filter(data)
         print_tweet(data['user']['screen_name'], data['text'])
+        Growl.notify("#{data['user']['screen_name']}: #{data['text']}")        
       end
     else
       print_tweet(data['user']['screen_name'], data['text'])
+      Growl.notify("#{data['user']['screen_name']}: #{data['text']}")
     end
   end
 
