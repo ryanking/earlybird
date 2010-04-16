@@ -4,7 +4,7 @@
 
 $KCODE = 'u'
 
-%w[rubygems pp net/http json twitter-text term/ansicolor twitter highline/import getoptlong].each{|l| require l}
+%w[rubygems pp net/http json twitter-text term/ansicolor twitter highline/import getoptlong tempfile open-uri].each{|l| require l}
 
 include Term::ANSIColor
 
@@ -17,6 +17,7 @@ class EarlyBird
     @filter = filter
     @screen_name = user
     @track = Array(track) + Array(user)
+    @icons = {}
   end
 
   def highlight(text)
@@ -31,6 +32,24 @@ class EarlyBird
         green(match)
       end
     end
+  end
+
+  def fetch_icon_for_user(user)
+    user_id = user['id'].to_i
+    unless @icons.has_key?(user_id)
+      Tempfile.open(user['screen_name']) do |file|
+        file.print open(user['profile_image_url']).read
+        @icons[user_id] = file.path
+      end
+    end
+    @icons[user_id]
+  end
+
+  def growl_tweet(data)
+    return unless $growl
+
+    icon_path = fetch_icon_for_user(data['user'])
+    Growl.notify(data['text'], :title => data['user']['screen_name'], :icon => icon_path)
   end
 
   def print_tweet(sn, text)
@@ -75,10 +94,18 @@ class EarlyBird
     if $filter
       if passes_filter(data)
         print_tweet(data['user']['screen_name'], data['text'])
+        growl_tweet(data)
       end
     else
       print_tweet(data['user']['screen_name'], data['text'])
+      growl_tweet(data)
     end
+  end
+
+  def print_retweet_from_data(data)
+    print sn(data['user']['screen_name']), " retweeted: " + "\n\t"
+    print_tweet(data['retweeted_status']['user']['screen_name'], data['retweeted_status']['text'])
+    growl_tweet(data)
   end
 
   def process(data)
@@ -89,8 +116,7 @@ class EarlyBird
       # If it's from a friend or from yourself, treat as a tweet.
       if @friends.include?(data['user']['id']) or (data['user']['screen_name'] == @screen_name)
         if data['retweeted_status']
-          print sn(data['user']['screen_name']), " retweeted: " + "\n\t"
-          print_tweet(data['retweeted_status']['user']['screen_name'], data['retweeted_status']['text'])
+          print_retweet_from_data(data)
         else
           print_tweet_from_data(data)
         end
@@ -198,6 +224,7 @@ def usage
   puts "options: "
   puts "  -d debug mode, read json from stdin"
   puts "  -f filter out @replies from users you don't follow"
+  puts "  -g growl notifications for new tweets"
   puts "  -t track keywords separated by commas."
   puts "  -u userstream path. Default: /2b/user.json"
   puts "  -h userstream hostname: Default: chirpstream.twitter.com"
@@ -207,12 +234,14 @@ opts = GetoptLong.new(
       [ '--help', GetoptLong::NO_ARGUMENT ],
       [ '-d', GetoptLong::OPTIONAL_ARGUMENT ],
       [ '-f', GetoptLong::OPTIONAL_ARGUMENT ],
+      [ '-g', GetoptLong::OPTIONAL_ARGUMENT ],
       [ '-t', GetoptLong::OPTIONAL_ARGUMENT],
       [ '-h', GetoptLong::OPTIONAL_ARGUMENT]
     )
 
 $debug = false
 $filter = false
+$growl = false
 $track = []
 $url = '/2b/user.json'
 $host = 'chirpstream.twitter.com'
@@ -224,6 +253,9 @@ opts.each do |opt, arg|
     exit 0
   when '-f'
     $filter = true
+  when '-g'
+    require 'growl'
+    $growl = true
   when '-d'
     $debug = true
   when '-t'
