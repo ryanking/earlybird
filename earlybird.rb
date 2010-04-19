@@ -216,6 +216,8 @@ class Hose
   end
 end
 
+trap("INT", "EXIT")
+
 user = ask("Enter your username:  ")
 pass = ask("Enter your password:  ") { |q| q.echo = '*' }
 
