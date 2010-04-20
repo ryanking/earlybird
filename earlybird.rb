@@ -112,6 +112,9 @@ class EarlyBird
     if data['friends']
       # initial dump of friends
       @friends = data['friends']
+    elsif data['sender'] #dm
+      print "direct message: \n\t"
+      print_tweet(data['sender_screen_name'], data['text'])
     elsif data['text'] #tweet
       # If it's from a friend or from yourself, treat as a tweet.
       if @friends.include?(data['user']['id']) or (data['user']['screen_name'] == @screen_name)
