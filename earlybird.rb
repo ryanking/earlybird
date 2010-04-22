@@ -154,6 +154,13 @@ class EarlyBird
     puts "event dropped due to twitter rate limit (reset in #{@client.rate_limit_status['reset_time_in_seconds'] - Time.now} seconds)"
     p @client.rate_limit_status
   end
+
+  def cleanup_icons
+    @icons.each_value do |path|
+      File.delete(path) rescue nil
+    end
+    @icons = {}
+  end
 end
 
 class Hose
@@ -216,6 +223,8 @@ class Hose
   end
 end
 
+trap("INT", "EXIT")
+
 user = ask("Enter your username:  ")
 pass = ask("Enter your password:  ") { |q| q.echo = '*' }
 
@@ -275,4 +284,6 @@ end
 puts "connecting to http://#{$host}#{$url}"
 
 eb = EarlyBird.new(user, pass, $filter, $track)
+trap("EXIT") { eb.cleanup_icons }
+
 Hose.new.run(user, pass, $host, $url, $debug){|line| eb.process(line)}
