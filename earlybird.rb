@@ -112,6 +112,9 @@ class EarlyBird
     if data['friends']
       # initial dump of friends
       @friends = data['friends']
+    elsif data['sender'] #dm
+      print "direct message: \n\t"
+      print_tweet(data['sender_screen_name'], data['text'])
     elsif data['text'] #tweet
       # If it's from a friend or from yourself, treat as a tweet.
       if @friends.include?(data['user']['id']) or (data['user']['screen_name'] == @screen_name)
@@ -128,7 +131,7 @@ class EarlyBird
       case data['event']
       when 'favorite', 'unfavorite'
         u, s = user_and_status(data['source']['id'], data['target_object']['id'])
-        print sn(u.screen_name), ' favorited: ' + "\n"
+        print sn(u.screen_name), ' ', data['event'], 'd', "\n"
         print "\t"
         print_tweet(s.user.screen_name, s.text)
       when 'unfollow', 'follow', 'block'
